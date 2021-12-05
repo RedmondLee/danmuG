@@ -72,8 +72,9 @@ class Worker:
             normal_init_flag = False
             sessid, csrf_token = None, None
 
-        assert len(sessid) == 34 and len(csrf_token) == 32 # 如果出现错误代表获取到的数据不合法 
-
+        if len(sessid) != 34 or len(csrf_token) != 32: # 如果出现错误代表获取到的数据不合法 
+            input("身份信息校验失败")
+            sys.exit(1)
         try:
             conf.read(cfg_path)
             secrets = conf.items('secrets')
@@ -170,7 +171,7 @@ class Worker:
         payload = {
             'type': '1',
             'oid': cid,
-            'msg': msg,
+            'msg': msg[:80],
             'bvid': bvid,
             'progress': progress,
             'color': '16777215',

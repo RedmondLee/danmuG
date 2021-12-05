@@ -134,3 +134,5 @@ log*
 chrome*
 *.db
 *config*ini
+thunder/build/
+thunder/dist/

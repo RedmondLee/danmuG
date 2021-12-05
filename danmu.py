@@ -190,12 +190,7 @@ class Fisherman:
             re.compile("\[emts\][\s\S]*?\[/emts\]"),
             re.compile("\[img\][\s\S]*?\[/img\]"),
             re.compile("<b>.+</b>"),
-            re.compile("(cc|CC)"),
-            re.compile("(cnm|CNM)"),
-            re.compile("(cao|CAO)"),
-            re.compile("(kale|KALE)"),
-            re.compile("艹"),
-            re.compile("狗比"),
+            re.compile("(cc|CC|cnm|CNM|cao|CAO|kale|KALE|艹|狗比|拉屎|本子|主播)")
         )
         self._string_filter = lambda x: x.replace('\r\n',' ').replace('\n',' ').strip()
 
