@@ -70,7 +70,7 @@ class Worker:
             sessid, csrf_token = secrets['sessid'], secrets['csrf_token']
         except:
             normal_init_flag = False
-            sessid, csrf_token = None, None
+            sessid, csrf_token = '', ''
 
         if len(sessid) != 34 or len(csrf_token) != 32: # 如果出现错误代表获取到的数据不合法 
             input("身份信息校验失败")
