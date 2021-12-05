@@ -132,10 +132,10 @@ async def fetch_superman() -> dict:
 @app.post("/github-webhook", response_class=ORJSONResponse)
 async def github_webhook_activated(req: Request, X_Hub_Signature_256: Optional[str] = Header(None, convert_underscores=True)):
     payload = await req.body()
-    res = hmac.compare_digest(hmac.new('secret'.encode(), payload , digestmod = sha256).hexdigest(), X_Hub_Signature_256[8:])
+    res = hmac.compare_digest(hmac.new(webhook_secret.encode(), payload , digestmod = sha256).hexdigest(), X_Hub_Signature_256[7:])
     if res:
         default_logger.info("Git push webhook trigered")
-        await git_pull()
+        await git_pull(asyncio.get_running_loop())
         default_logger.info("Git pulled")
         await scan_and_reload(engine)
         default_logger.info("Engine finish update")
