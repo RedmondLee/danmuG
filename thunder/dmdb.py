@@ -232,14 +232,14 @@ async def scan_and_reload(engine):
 
 async def clean_task_daemon(engine, msg_core):
     while True:
-        async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+        async_session = sessionmaker(engine, expire_on_commit=True, class_=AsyncSession)
         async with async_session() as session:
             stmt = select(BVRelations.tname).where(BVRelations.bvid==BVStatus.bvid).where(BVStatus.finished==False).order_by(BVStatus.create_time.desc()).limit(44)
             table_names_to_check = set((await session.execute(stmt)).scalars().all())
             table_to_check = AbstractTable.__subclasses__() | Filter(lambda x: x.__tablename__ in table_names_to_check) | list
         for table in table_to_check:
             async with GlobLock:
-                async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+                async_session = sessionmaker(engine, expire_on_commit=True, class_=AsyncSession)
                 async with async_session() as session:
                     hit = (await session.execute(select(table).where(table.status < 3).limit(1))).scalars().all()
                     if not hit:
@@ -348,9 +348,9 @@ class DAL:
                 for item in item_set:
                     item.status = 4
                     item.fail_count = 2
-                await session.execute(update(BVStatus).where(BVStatus.bvid == bvid).values(finished=True))
-            await session.commit()
-        return True
+                await self.session.execute(update(BVStatus).where(BVStatus.bvid == bvid).values(finished=True))
+            await self.session.commit()
+            return True
 
     async def client_confirm_quest(self, bvid: str, qid: int, token: str):
         table = self.table_porj.get(bvid)

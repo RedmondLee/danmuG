@@ -23,7 +23,7 @@ dev = json.loads(secrets['dev'].encode())
 host = json.loads(secrets['host'].encode())
 port = json.loads(secrets['port'].encode())
 
-app = FastAPI(docs_url='/doc' if dev else None, redoc_url=None)
+app = FastAPI(docs_url='/docs' if dev else None, redoc_url=None)
 if not dev: 
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=trust_list)
 
@@ -75,12 +75,12 @@ async def get_archive_earliest(mode: Literal["auto", "specified"], bvid: Optiona
     async with async_session() as session:
         async with session.begin():
             dal = DAL(engine, session, msg_core)
+            print("Git push webhook trigered")
             resp = await dal.get_archive_earliest(mode, str(bvid))
-
             if isinstance(resp, tuple):
                 return {'success': 1, 'data': dict(zip(('id', 'progress', 'cid', 'bvid', 'msg', 'token', 'bias'), resp))}
             elif isinstance(resp, bool) and resp == True:
-                return {'success': 1, 'data': {1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 'bias':0}}
+                return {'success': 1, 'data': {'a':1, 'b':2, 'c':3, 'd':4, 'e':5, 'f':6, 'bias':0}}
             elif isinstance(resp, int):
                 return error_codes[resp]
             return {}
@@ -139,4 +139,4 @@ if __name__ == '__main__':
     log_config = uvicorn.config.LOGGING_CONFIG
     log_config["formatters"]["default"]["fmt"] = "[%(asctime)s] | %(levelname)s | %(message)s"
     log_config["formatters"]["access"]["fmt"] = "[%(asctime)s] | %(levelname)s | %(message)s"
-    uvicorn.run("dmserver:app", port=port, host=host, log_config=log_config) 
+    uvicorn.run("dmserver:app", port=8080, host=host, log_config=log_config) 
