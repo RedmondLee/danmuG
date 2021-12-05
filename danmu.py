@@ -342,9 +342,9 @@ class Fisherman:
             if m['msg_type'] == 'danmaku':
                 cmt = m["content"]
                 self.logger.info(f'cmt - {m["name"]}：{m["content"]}')
-                cmt = self.ddos_protect(cmt)
-                if cmt:
-                    writer.update(self._string_filter(cmt))
+                cmt = self._string_filter(self.ddos_protect(cmt))
+                if cmt and '\n' not in cmt:
+                    writer.update(cmt)
             elif m['msg_type'] == 'close':
                 self.logger.info("接收到终止信号，写入线程退出")
                 self.ddos_reset()
