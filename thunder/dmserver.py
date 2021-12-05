@@ -12,6 +12,13 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from dmutils import AsyncIteratorWrapper, git_pull, ConfigParser
 from dmdb import *
 
+import platform 
+osName = platform.system()
+if osName=='Linux':
+    import uvloop
+    uvloop.install()
+
+
 file_dir = os.path.dirname(os.path.realpath(__file__))
 cfg_path = os.path.join(file_dir, "server_config.ini")
 conf = ConfigParser()
