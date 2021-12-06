@@ -39,7 +39,7 @@ for file_name in files:
             scaned = pat.search(text)
     # 
     text = text.split('\n')
-    text_new = text[:8]
+    text_new = text[:8] | Map(lambda x:x + '\n') | list
     for line in text[8:]:
         for pat in key_word_pats:
             if pat.search(line):
