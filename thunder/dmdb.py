@@ -413,6 +413,7 @@ class DAL:
                         item.status = 0
                         if item.fail_count >= 2:
                             item.status = 4
+                        table_finish = await self.check_finished(table)
                         if table_finish:
                             stmt = update(BVStatus).where(BVStatus.bvid == bvid).values(finished=True)
                             await self.session.execute(stmt)
