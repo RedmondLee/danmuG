@@ -88,7 +88,10 @@ class Contributors(Base):
 async def scan_and_reload(engine):
 
     def _get(x):
-        return x[x.index(':')+1:].strip()
+        if ":" in x:
+            return x[x.index(':')+1:].strip()
+        else:
+            return ""
 
     def valid_check(cids, prefixs, bvid):
         try:

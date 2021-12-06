@@ -39,8 +39,8 @@ for file_name in files:
             scaned = pat.search(text)
     # 
     text = text.split('\n')
-    text_new = []
-    for line in text:
+    text_new = text[:8]
+    for line in text[8:]:
         for pat in key_word_pats:
             if pat.search(line):
                 break
