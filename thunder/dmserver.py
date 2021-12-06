@@ -129,16 +129,27 @@ async def fetch_superman() -> dict:
     ...
 
 
+pull_stack = []
 @app.post("/github-webhook", response_class=ORJSONResponse)
 async def github_webhook_activated(req: Request, X_Hub_Signature_256: Optional[str] = Header(None, convert_underscores=True)):
     payload = await req.body()
     res = hmac.compare_digest(hmac.new(webhook_secret.encode(), payload , digestmod = sha256).hexdigest(), X_Hub_Signature_256[7:])
     if res:
-        default_logger.info("Git push webhook trigered")
-        await git_pull(asyncio.get_running_loop())
-        default_logger.info("Git pulled")
-        await scan_and_reload(engine)
-        default_logger.info("Engine finish update")
+        default_logger.info(f"Update pool stack length: {len(pull_stack)}")
+        if len(pull_stack) == 0:
+            pull_stack.append(None)
+            while pull_stack:
+                default_logger.info("Git push webhook trigered")
+                await git_pull(asyncio.get_running_loop())
+                default_logger.info("Git pulled")
+                await scan_and_reload(engine)
+                default_logger.info("Engine finish update")
+                pull_stack.pop()
+        else:
+            while len(pull_stack) > 1:
+                pull_stack.pop()
+            pull_stack.push(None)
+        default_logger.debug(f"Send response, pool stack length: {len(pull_stack)}")
     return {'success': 0, 'data': {'assertion result': res}}
 
 
