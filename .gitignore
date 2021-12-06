@@ -136,3 +136,6 @@ chrome*
 *config*ini
 thunder/build/
 thunder/dist/
+thunder/log*
+*.spec
+misc/pyinstaller_patch/pyinstaller_patch/

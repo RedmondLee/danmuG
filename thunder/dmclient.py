@@ -1,12 +1,15 @@
 import os
 import asyncio
+import signal
 import random
 import time
 import json
 import sys
 import re
+import requests
 from loguru import logger
 from aiohttp import ClientSession
+from hyper.contrib import HTTP20Adapter
 from dmutils import determine_if_cmt_public, ConfigParser
 from pipeit import *
 
@@ -28,11 +31,9 @@ class Worker:
         self.logger = logger
         self.built_in_cdn_server = 'http://127.0.0.1:8080/'
         self.sessid, self.csrf_token, self.buvid, self.server_url, self.working_mode, self.userid,  self.loglevel, _ = self.init()
-        self.logger.remove()
-        self.logger.add(sys.stdout, level=self.loglevel)
-        if self.server_url[-1] == '/':
+        while self.server_url[-1] == '/':
             self.server_url = self.server_url[:-1]
-
+        self.logger.add(sys.stdout, level=self.loglevel)
         self.logger.info("Worker初始化")
         _msg = "配置文件载入正常" if _ else "配置文件载入失败，初始化配置文件"
         self.logger.info(_msg)
@@ -45,6 +46,7 @@ class Worker:
         self.logger.debug(f"csrf_token: {self.csrf_token}")
         self.logger.debug(f"buvid: {self.buvid}")
         self.close = False
+        self.wait_closed = asyncio.Event()
         self.loop = None
         if self.working_mode == 'specified':
             self.logger.info("请输入你希望投稿的视频链接，按回车继续")
@@ -73,7 +75,7 @@ class Worker:
             sessid, csrf_token = '', ''
 
         if len(sessid) != 34 or len(csrf_token) != 32: # 如果出现错误代表获取到的数据不合法 
-            input("身份信息校验失败")
+            input("身份信息校验失败，按任意键退出")
             sys.exit(1)
         try:
             conf.read(cfg_path)
@@ -141,7 +143,7 @@ class Worker:
             return False
 
         self.logger.debug("步骤3 - 发送一条弹幕")
-        api_url = 'http://api.bilibili.com/x/v2/dm/post'
+        api_url = 'https://api.bilibili.com/x/v2/dm/post'
         headers = {
             ':authority': 'api.bilibili.com',
             ':method': 'POST',
@@ -184,16 +186,29 @@ class Worker:
         }
         for _ in range(2):
             try:
-                async with session.post(api_url, data=payload, headers=headers, cookies=cookies) as resp:
-                    if resp.status == 200:
-                        res = await resp.text()
-                        self.logger.debug(f"步骤3反馈 - {res}")
-                        res = json.loads(res)
-                        if check_success(res):
-                            self.logger.debug(f"步骤3成功 - {bvid}:{cid}:{progress}:{msg} - dmid:{res.get('data',{}).get('dmid','dmid')}")
-                            return True
-                    self.logger.warning(f"步骤3状态码错误 - {resp.status}:{await resp.text()}")
-                    await asyncio.sleep(10)
+                # 因为发现asyncio的post模块似乎用pyinstaller打包会遇到bug，G了
+                # async with session.post(api_url, data=payload, headers=headers, cookies=cookies) as resp:
+                #     if resp.status == 200:
+                #         res = await resp.text()
+                #         self.logger.debug(f"步骤3反馈 - {res}")
+                #         res = json.loads(res)
+                #         if check_success(res):
+                #             self.logger.debug(f"步骤3成功 - {bvid}:{cid}:{progress}:{msg} - dmid:{res.get('data',{}).get('dmid','dmid')}")
+                #             return True
+                #     self.logger.warning(f"步骤3状态码错误 - {resp.status}:{await resp.text()}")
+                # await asyncio.sleep(10)
+                rsession = requests.session()
+                rsession.mount('https://api.bilibili.com', HTTP20Adapter())
+                resp = rsession.post(api_url, data=payload, headers=headers, cookies=cookies)
+                if resp.status_code == 200:
+                    res = resp.text
+                    self.logger.debug(f"步骤3反馈 - {res}")
+                    res = json.loads(res)
+                    if check_success(res):
+                        self.logger.debug(f"步骤3成功 - {bvid}:{cid}:{progress}:{msg} - dmid:{res.get('data',{}).get('dmid','dmid')}")
+                        return True
+                self.logger.warning(f"步骤3状态码错误 - {resp.status}:{await resp.text()}")
+                await asyncio.sleep(10)
             except:
                 raise 
                 ...
@@ -300,6 +315,11 @@ class Worker:
 
         fail_count = 0
         while True:
+            if self.close:
+                self.logger.info("投递线程终止")
+                self.wait_closed.set()
+                break
+
             res = await self.standard_process()
             if res == 3:
                 if self.mode == 'specified':
@@ -313,21 +333,29 @@ class Worker:
                 fail_count = 0
             if fail_count >= 10:
                 self.logger.warning(f"连续失败10次投递，设置可能出现问题或SESSDATA过期，请检查相关设置，程序退出")
+                self.close = True
             await asyncio.sleep(1)
+
+    def pseudo_sigint(self, sig, frame):
+        if not self.close:
+            self.logger.info("接收到键盘终止信号，准备退出程序")
+            self.logger.info("如果有正在进行的投递流程则会等到本轮投递流程完成")
+            self.close = True
 
     async def run_start(self):
         self.loop = asyncio.get_running_loop()
 
         self.loop.create_task(self.run_daemon())
-        while True:
-            try:
-                if self.close:
-                    self.logger.info("程序结束")
-                    break
-                await asyncio.sleep(3)
-            except KeyboardInterrupt:
-                return
+        while not self.wait_closed.is_set():
+            await asyncio.sleep(3)
+        self.logger.info("程序结束")
+        sys.exit(0)
+
 
 logger.remove()
 sys.stdout.reconfigure(encoding='utf-8', errors='backslashreplace')
-asyncio.get_event_loop().run_until_complete(Worker(logger).run_start())
+logger.add('log_debug.txt', level='DEBUG', rotation="5 MB", encoding='utf-8')
+worker = Worker(logger)
+signal.signal(signal.SIGINT, worker.pseudo_sigint)
+asyncio.get_event_loop().run_until_complete(worker.run_start())
+input("按回车键或点击右上角叉叉退出")

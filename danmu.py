@@ -185,12 +185,37 @@ class Fisherman:
             '急了 他急了 主播他急了',
             '您的客户端较老，暂不支持显示表情',
         }
+        self._biliibli_block_set = ( 
+            # 根据弹幕重投失败反馈的B站弹幕拦截关键字
+            # 也许与用户等级低有关也说不定
+            # 总之可以看得出阿B真的很敏感
+            'cc',
+            'CC',
+            'cnm',
+            'CNM',
+            'cao',
+            'CAO',
+            'kale',
+            'KALE',
+            '艹',
+            '狗比',
+            '拉屎',
+            '本子',
+            '主播',
+            '好烧',
+            '骚',
+            '倪哥',
+            '尼哥',
+            '想透',
+            '紧身衣',
+            '工人运动',
+        )
         self._re_block_set = (
             re.compile("感谢.*大佬"),
             re.compile("\[emts\][\s\S]*?\[/emts\]"),
             re.compile("\[img\][\s\S]*?\[/img\]"),
             re.compile("<b>.+</b>"),
-            re.compile("(cc|CC|cnm|CNM|cao|CAO|kale|KALE|艹|狗比|拉屎|本子|主播|好烧|好骚)")
+            re.compile(f"({'|'.join(self._biliibli_block_set)})")
         )
         self._string_filter = lambda x: x.replace('\r\n',' ').replace('\r',' ').replace('\n',' ').strip()
 
